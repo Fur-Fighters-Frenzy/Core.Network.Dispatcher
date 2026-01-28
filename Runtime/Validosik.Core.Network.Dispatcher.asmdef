@@ -1,0 +1,17 @@
+{
+    "name": "Validosik.Core.Network.Dispatcher",
+    "rootNamespace": "Validosik.Core.Network.Dispatcher",
+    "references": [
+        "Validosik.Core.Network",
+        "Validosik.Core.Network.Envelope"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

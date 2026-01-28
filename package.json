@@ -1,0 +1,23 @@
+{
+  "name": "validosik.core.network.dispatcher",
+  "displayName": "Core.Network Dispatcher",
+  "version": "0.0.1",
+  "unity": "6000.0",
+  "description": "Transport-agnostic dispatch layer for Core.Network: map KindId -> handler, auto-register DTO parsers via reflection, and unpack batched event streams. Does not enforce client/server semantics and does not publish into any event bus (integrations are optional).",
+  "author": { "name": "validosik" },
+  "dependencies": {
+    "validosik.core.network": "0.0.1",
+    "validosik.core.network.envelope": "0.0.1"
+  },
+  "keywords": [
+    "core-network",
+    "dispatcher",
+    "events",
+    "routing",
+    "reflection",
+    "dto",
+    "unpack",
+    "transport-agnostic",
+    "unity"
+  ]
+}
