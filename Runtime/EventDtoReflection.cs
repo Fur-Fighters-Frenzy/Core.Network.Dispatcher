@@ -8,16 +8,14 @@ namespace Validosik.Core.Network.Dispatcher
 {
     internal static class EventDtoReflection
     {
-        internal static IEnumerable<Type> FindEventDtoStructs<TKind>(IEnumerable<Assembly> assemblies)
+        internal static IEnumerable<Type> FindEventDtoStructs<TKind, TMarker>(IEnumerable<Assembly> assemblies)
             where TKind : unmanaged, Enum
+            where TMarker : class
         {
             foreach (var asm in assemblies)
             {
                 Type[] types;
-                try
-                {
-                    types = asm.GetTypes();
-                }
+                try { types = asm.GetTypes(); }
                 catch (ReflectionTypeLoadException e)
                 {
                     types = e.Types.Where(t => t != null).ToArray()!;
@@ -27,11 +25,9 @@ namespace Validosik.Core.Network.Dispatcher
                 {
                     if (t == null) continue;
 
-                    // Only value-type DTOs (structs).
                     if (!t.IsValueType || t.IsEnum) continue;
-
-                    // Must implement IEventDto<TKind>.
                     if (!ImplementsEventDtoOfKind<TKind>(t)) continue;
+                    if (!typeof(TMarker).IsAssignableFrom(t)) continue;
 
                     yield return t;
                 }
@@ -46,17 +42,14 @@ namespace Validosik.Core.Network.Dispatcher
                 if (!i.IsGenericType) continue;
                 if (i.GetGenericTypeDefinition() != typeof(IEventDto<>)) continue;
 
-                var arg = i.GetGenericArguments()[0];
-                if (arg == typeof(TKind)) return true;
+                if (i.GetGenericArguments()[0] == typeof(TKind))
+                    return true;
             }
-
             return false;
         }
 
         internal static MethodInfo GetTryFromBytesOrThrow(Type dtoType)
         {
-            // Expected signature:
-            // public static bool TryFromBytes(ReadOnlySpan<byte> span, out TDto dto)
             var mi = dtoType.GetMethod(
                 "TryFromBytes",
                 BindingFlags.Public | BindingFlags.Static,
@@ -71,14 +64,6 @@ namespace Validosik.Core.Network.Dispatcher
             }
 
             return mi;
-        }
-
-        internal static ushort GetKindAsUShort<TDto, TKind>()
-            where TDto : struct, IEventDto<TKind>
-            where TKind : unmanaged, Enum
-        {
-            // Convert handles enum boxing safely.
-            return Convert.ToUInt16(default(TDto).Kind);
         }
     }
 }

@@ -6,32 +6,31 @@ using Validosik.Core.Network.Types;
 
 namespace Validosik.Core.Network.Dispatcher.Client
 {
-    public static class ClientDispatcherBootstrapper<TDispatcher, TKind>
+    public static class ClientDispatcherBootstrapper<TDispatcher, TKind, TMarker>
         where TDispatcher : IClientDispatcher
         where TKind : unmanaged, Enum
+        where TMarker : class
     {
         public static void Initialize(
             TDispatcher dispatcher,
-            IClientParsedSink<TKind> sink,
+            IClientParsedSink<TKind, TMarker> sink,
             [CanBeNull] params Assembly[] assemblies)
         {
             var scanAssemblies = assemblies is { Length: > 0 }
                 ? assemblies
                 : AppDomain.CurrentDomain.GetAssemblies();
 
-            foreach (var dtoType in EventDtoReflection.FindEventDtoStructs<TKind>(scanAssemblies))
+            foreach (var dtoType in EventDtoReflection.FindEventDtoStructs<TKind, TMarker>(scanAssemblies))
             {
                 RegisterOneByReflection(dispatcher, sink, dtoType);
             }
         }
 
-        private static void RegisterOneByReflection(TDispatcher dispatcher, IClientParsedSink<TKind> sink, Type dtoType)
+        private static void RegisterOneByReflection(TDispatcher dispatcher, IClientParsedSink<TKind, TMarker> sink, Type dtoType)
         {
-            var mi = typeof(ClientDispatcherBootstrapper<TDispatcher, TKind>)
-                .GetMethod(nameof(RegisterOne), BindingFlags.NonPublic | BindingFlags.Static);
-
-            if (mi == null)
-                throw new MissingMethodException($"Missing {nameof(RegisterOne)} method.");
+            var mi = typeof(ClientDispatcherBootstrapper<TDispatcher, TKind, TMarker>)
+                .GetMethod(nameof(RegisterOne), BindingFlags.NonPublic | BindingFlags.Static)
+                ?? throw new MissingMethodException($"Missing {nameof(RegisterOne)} method.");
 
             mi.MakeGenericMethod(dtoType).Invoke(null, new object[] { dispatcher, sink });
         }
@@ -39,10 +38,9 @@ namespace Validosik.Core.Network.Dispatcher.Client
         private delegate bool TryParseDelegate<TDto>(ReadOnlySpan<byte> span, out TDto dto)
             where TDto : struct;
 
-        private static void RegisterOne<TDto>(TDispatcher dispatcher, IClientParsedSink<TKind> sink)
-            where TDto : struct, IEventDto<TKind>
+        private static void RegisterOne<TDto>(TDispatcher dispatcher, IClientParsedSink<TKind, TMarker> sink)
+            where TDto : struct, IEventDto<TKind>, TMarker
         {
-            // No per-packet reflection: all work below happens once at bootstrap time.
             var kind = default(TDto).Kind;
             var kindU16 = Convert.ToUInt16(kind);
 
