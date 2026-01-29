@@ -8,11 +8,11 @@ namespace Validosik.Core.Network.Dispatcher.Client
 {
     public static class ClientDispatcherBootstrapper<TDispatcher, TKind>
         where TDispatcher : IClientDispatcher
-        where TKind : struct
+        where TKind : unmanaged, Enum
     {
         public static void Initialize(
             TDispatcher dispatcher,
-            Action<ushort, PlayerId, object> onParsed,
+            IClientParsedSink<TKind> sink,
             [CanBeNull] params Assembly[] assemblies)
         {
             var scanAssemblies = assemblies is { Length: > 0 }
@@ -21,11 +21,11 @@ namespace Validosik.Core.Network.Dispatcher.Client
 
             foreach (var dtoType in EventDtoReflection.FindEventDtoStructs<TKind>(scanAssemblies))
             {
-                RegisterOneByReflection(dispatcher, onParsed, dtoType);
+                RegisterOneByReflection(dispatcher, sink, dtoType);
             }
         }
 
-        private static void RegisterOneByReflection(TDispatcher dispatcher, Action<ushort, PlayerId, object> onParsed, Type dtoType)
+        private static void RegisterOneByReflection(TDispatcher dispatcher, IClientParsedSink<TKind> sink, Type dtoType)
         {
             var mi = typeof(ClientDispatcherBootstrapper<TDispatcher, TKind>)
                 .GetMethod(nameof(RegisterOne), BindingFlags.NonPublic | BindingFlags.Static);
@@ -33,27 +33,28 @@ namespace Validosik.Core.Network.Dispatcher.Client
             if (mi == null)
                 throw new MissingMethodException($"Missing {nameof(RegisterOne)} method.");
 
-            mi.MakeGenericMethod(dtoType).Invoke(null, new object[] { dispatcher, onParsed });
+            mi.MakeGenericMethod(dtoType).Invoke(null, new object[] { dispatcher, sink });
         }
 
         private delegate bool TryParseDelegate<TDto>(ReadOnlySpan<byte> span, out TDto dto)
             where TDto : struct;
 
-        private static void RegisterOne<TDto>(TDispatcher dispatcher, Action<ushort, PlayerId, object> onParsed)
+        private static void RegisterOne<TDto>(TDispatcher dispatcher, IClientParsedSink<TKind> sink)
             where TDto : struct, IEventDto<TKind>
         {
-            // Enforce ushort-based enum contract at runtime.
-            var kind = EventDtoReflection.GetKindAsUShort<TDto, TKind>();
+            // No per-packet reflection: all work below happens once at bootstrap time.
+            var kind = default(TDto).Kind;
+            var kindU16 = Convert.ToUInt16(kind);
 
             var tryFromBytes = EventDtoReflection.GetTryFromBytesOrThrow(typeof(TDto));
             var parser = (TryParseDelegate<TDto>)tryFromBytes.CreateDelegate(typeof(TryParseDelegate<TDto>));
 
-            dispatcher.Register(kind, (span, sender) =>
+            dispatcher.Register(kindU16, (span, sender) =>
             {
                 if (!parser(span, out var dto))
                     return false;
 
-                onParsed(kind, sender, dto);
+                sink.OnParsed(kind, sender, in dto);
                 return true;
             });
         }

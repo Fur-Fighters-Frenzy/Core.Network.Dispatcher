@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Validosik.Core.Network.Dispatcher
+namespace Validosik.Core.Network.Dispatcher.Server
 {
     public interface IServerDispatcher
     {

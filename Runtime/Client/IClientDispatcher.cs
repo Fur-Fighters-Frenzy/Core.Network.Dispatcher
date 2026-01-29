@@ -1,7 +1,7 @@
 ﻿using System;
 using Validosik.Core.Network.Types;
 
-namespace Validosik.Core.Network.Dispatcher
+namespace Validosik.Core.Network.Dispatcher.Client
 {
     public interface IClientDispatcher
     {

@@ -9,7 +9,7 @@ namespace Validosik.Core.Network.Dispatcher
     internal static class EventDtoReflection
     {
         internal static IEnumerable<Type> FindEventDtoStructs<TKind>(IEnumerable<Assembly> assemblies)
-            where TKind : struct
+            where TKind : unmanaged, Enum
         {
             foreach (var asm in assemblies)
             {
@@ -39,7 +39,7 @@ namespace Validosik.Core.Network.Dispatcher
         }
 
         internal static bool ImplementsEventDtoOfKind<TKind>(Type t)
-            where TKind : struct
+            where TKind : unmanaged, Enum
         {
             foreach (var i in t.GetInterfaces())
             {
@@ -75,7 +75,7 @@ namespace Validosik.Core.Network.Dispatcher
 
         internal static ushort GetKindAsUShort<TDto, TKind>()
             where TDto : struct, IEventDto<TKind>
-            where TKind : struct
+            where TKind : unmanaged, Enum
         {
             // Convert handles enum boxing safely.
             return Convert.ToUInt16(default(TDto).Kind);
